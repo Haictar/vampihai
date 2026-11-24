@@ -16,3 +16,6 @@
 - [x] Unlimited API keys (remove the 5-key check that was still in the save step)
 - [x] Auto routing: if a model fails, switch to the next best available model; "Auto" choice in the model picker
 - [x] Show/hide dropdown for unhealthy keys and models in the API Manager
+- [x] Move HAI to this Lovable project (sign-in, keys, chat history, image maker)
+- [x] Rebuild Skills panel, web sources, browser voice actions and "stop" command missing from the upload
+- [ ] Import old users and chats (waiting on export from the old project)
