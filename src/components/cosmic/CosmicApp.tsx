@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   Download,
+  ExternalLink,
   FileArchive,
   FileText,
   History,
@@ -40,6 +41,7 @@ import { ChatMarkdown } from "@/components/cosmic/ChatMarkdown";
 import { useSpeechInput } from "@/hooks/use-speech-input";
 import { useWakeWord } from "@/hooks/use-wake-word";
 import { speakableText } from "@/lib/hai/speakable";
+import { openInNewTab } from "@/lib/hai/open-tab";
 import { pickFemaleVoice } from "@/lib/hai/voice";
 import { haiChat, haiImage, listApiKeys } from "@/lib/hai/hai.functions";
 import {
@@ -100,6 +102,8 @@ type ChatMessage = {
   meta?: string;
   sources?: GroundingSource[];
   pending?: boolean;
+  /** A website or app HAI opened (or couldn't open) by voice; shown as a new-tab button. */
+  link?: { url: string; label: string };
   /** Local notices (sign-in prompts, errors) are not sent back to the model. */
   local?: boolean;
 };
@@ -484,9 +488,20 @@ export function CosmicApp() {
     const browserAction = canRunCommand ? parseBrowserVoiceAction(spoken) : null;
     if (browserAction) {
       stopVoiceAssistant();
-      const browserWindow = window.open(browserAction.url, "_blank");
-      if (browserWindow) browserWindow.opener = null;
-      else window.location.assign(browserAction.url);
+      setChatDraft(before);
+      const opened = openInNewTab(browserAction.url, (url, target) => window.open(url, target));
+      setChatMessages((messages) => [
+        ...messages,
+        {
+          id: Date.now(),
+          role: "assistant",
+          text: opened
+            ? `Opened ${browserAction.label} in a new tab.`
+            : `Your browser stopped me from opening ${browserAction.label} by voice. Tap the button to open it in a new tab. To make this automatic, allow pop-ups for this site in your browser.`,
+          link: { url: browserAction.url, label: browserAction.label },
+          local: true,
+        },
+      ]);
       return;
     }
     void sendChatMessage({ text: joinDraft(before, spoken), spoken: true });
@@ -1265,6 +1280,17 @@ export function CosmicApp() {
                     <div className="chat-bubble">
                       <ChatMarkdown text={message.text} />
                     </div>
+                  )}
+                  {message.link && (
+                    <a
+                      className="chat-link-button"
+                      href={message.link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink aria-hidden="true" />
+                      Open {message.link.label}
+                    </a>
                   )}
                   {message.sources && message.sources.length > 0 && (
                     <nav className="chat-sources" aria-label="Web sources">

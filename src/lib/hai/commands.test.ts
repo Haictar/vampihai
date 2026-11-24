@@ -42,22 +42,34 @@ describe("spoken stop and browser actions", () => {
   });
 
   it("opens well-known sites by name", () => {
-    expect(parseBrowserVoiceAction("open YouTube")).toEqual({ url: "https://www.youtube.com" });
+    expect(parseBrowserVoiceAction("open YouTube")).toEqual({
+      url: "https://www.youtube.com",
+      label: "YouTube",
+    });
+    expect(parseBrowserVoiceAction("open Spotify")).toEqual({
+      url: "https://open.spotify.com",
+      label: "Spotify",
+    });
   });
 
   it("opens a spoken web address", () => {
-    expect(parseBrowserVoiceAction("go to example dot com")).toEqual({ url: "https://example.com" });
+    expect(parseBrowserVoiceAction("go to example dot com")).toEqual({
+      url: "https://example.com",
+      label: "example.com",
+    });
   });
 
   it("searches Google for a spoken query", () => {
     expect(parseBrowserVoiceAction("search Google for cheap flights")).toEqual({
       url: "https://www.google.com/search?q=cheap%20flights",
+      label: "Google",
     });
   });
 
   it("plays a request on YouTube", () => {
     expect(parseBrowserVoiceAction("play lofi beats on YouTube")).toEqual({
       url: "https://www.youtube.com/results?search_query=lofi%20beats",
+      label: "YouTube",
     });
   });
 

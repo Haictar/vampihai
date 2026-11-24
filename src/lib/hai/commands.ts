@@ -64,6 +64,23 @@ export function matchVoiceCommand(spoken: string): VoiceCommand | null {
 
 export interface BrowserVoiceAction {
   url: string;
+  /** Name shown on the "Open …" button, for example "Spotify". */
+  label: string;
+}
+
+const SITE_LABELS: Record<string, string> = {
+  youtube: "YouTube",
+  github: "GitHub",
+  linkedin: "LinkedIn",
+  whatsapp: "WhatsApp",
+  "google maps": "Google Maps",
+  maps: "Google Maps",
+  x: "X",
+  twitter: "X",
+};
+
+function siteLabel(name: string): string {
+  return SITE_LABELS[name] ?? name.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const KNOWN_SITES: Record<string, string> = {
@@ -108,18 +125,22 @@ export function parseBrowserVoiceAction(spoken: string): BrowserVoiceAction | nu
   if (youtube?.[1]) {
     return {
       url: `https://www.youtube.com/results?search_query=${encodeURIComponent(youtube[1].trim())}`,
+      label: "YouTube",
     };
   }
   const search = /^(?:google|search (?:google |the web |online )?for|search google|look up)\s+(.+)$/.exec(t);
   if (search?.[1]) {
-    return { url: `https://www.google.com/search?q=${encodeURIComponent(search[1].trim())}` };
+    return {
+      url: `https://www.google.com/search?q=${encodeURIComponent(search[1].trim())}`,
+      label: "Google",
+    };
   }
   const open = /^(?:open|go to|launch|visit|take me to)\s+(?:the\s+)?(.+?)(?:\s+website|\s+site)?$/.exec(t);
   if (!open?.[1]) return null;
   const target = open[1].trim();
   const known = KNOWN_SITES[target];
-  if (known) return { url: known };
+  if (known) return { url: known, label: siteLabel(target) };
   const domain = target.replace(/\s+dot\s+/g, ".").replace(/\s+/g, "");
-  if (/^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(domain)) return { url: `https://${domain}` };
+  if (/^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(domain)) return { url: `https://${domain}`, label: domain };
   return null;
 }

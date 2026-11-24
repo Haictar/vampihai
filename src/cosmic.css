@@ -1774,6 +1774,29 @@ body,
   letter-spacing: 0.02em;
 }
 
+.chat-link-button {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid rgba(255, 184, 231, 0.32);
+  border-radius: 10px;
+  color: #ffd8f0;
+  background: rgba(255, 127, 220, 0.12);
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+
+.chat-link-button:hover {
+  background: rgba(255, 127, 220, 0.2);
+}
+
+.chat-link-button svg {
+  width: 13px;
+  height: 13px;
+}
+
 .chat-sources {
   display: flex;
   flex-wrap: wrap;
