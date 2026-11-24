@@ -968,6 +968,27 @@ export function CosmicApp() {
     }
   };
 
+  /**
+   * Saved pictures live on another address, where browsers ignore "download" and would replace
+   * the HAI tab. Fetch the picture and save it as a file; if that fails, open it in a new tab.
+   */
+  const downloadImage = async (url: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("download failed");
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "hai-image.jpg";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+    } catch {
+      openInNewTab(url, (href, target) => window.open(href, target));
+    }
+  };
+
   const voiceListening = speech.listening || wake.capturing;
   const orbState: OrbState = voiceListening
     ? "listening"
@@ -1308,7 +1329,13 @@ export function CosmicApp() {
                       <a
                         href={message.image}
                         download="hai-image.jpg"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="chat-image__download"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void downloadImage(message.image!);
+                        }}
                       >
                         <Download aria-hidden="true" />
                         Download
