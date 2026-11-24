@@ -58,6 +58,7 @@ export function matchVoiceCommand(spoken: string): VoiceCommand | null {
     .replace(/^(?:hey\s+)?hai[,!]?\s+/, "")
     .replace(/^please\s+/, "")
     .replace(/[.!?,]+$/g, "")
+    .replace(/\s+(?:for me|please|now|right now)$/, "")
     .trim();
   return VOICE_COMMANDS.find((c) => c.pattern.test(t))?.command ?? null;
 }
@@ -109,6 +110,7 @@ function cleanSpoken(spoken: string): string {
     .replace(/^(?:hey\s+)?hai[,!]?\s+/, "")
     .replace(/^(?:please\s+)?(?:(?:can|could|would|will) you\s+)?(?:please\s+)?/, "")
     .replace(/[.!?,]+$/g, "")
+    .replace(/\s+(?:for me|please|now|right now)$/, "")
     .trim();
 }
 
@@ -164,7 +166,7 @@ export function parseBrowserVoiceAction(
   }
   const open = /^(?:open|go to|launch|visit|take me to)\s+(?:the\s+)?(.+?)(?:\s+website|\s+site)?$/.exec(t);
   if (!open?.[1]) return null;
-  const target = open[1].trim();
+  const target = open[1].trim().replace(/\s+(?:app|application)$/, "");
   const known = KNOWN_SITES[target];
   if (known) return { url: known, label: siteLabel(target) };
   const domain = target.replace(/\s+dot\s+/g, ".").replace(/\s+/g, "");

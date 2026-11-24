@@ -120,3 +120,12 @@ describe("parseBrowserVoiceAction: open an app and play something", () => {
     expect(parseBrowserVoiceAction("search for good recipes", { typed: true })).toBeNull();
   });
 });
+
+describe("parseBrowserVoiceAction: everyday wording", () => {
+  it("opens an app named with 'app' or 'for me'", () => {
+    expect(parseBrowserVoiceAction("open the Spotify app")?.url).toBe("https://open.spotify.com");
+    expect(parseBrowserVoiceAction("play Khat on YouTube for me")?.url).toBe(
+      "https://www.youtube.com/results?search_query=khat",
+    );
+  });
+});

@@ -41,7 +41,7 @@ import { ChatMarkdown } from "@/components/cosmic/ChatMarkdown";
 import { useSpeechInput } from "@/hooks/use-speech-input";
 import { useWakeWord } from "@/hooks/use-wake-word";
 import { speakableText } from "@/lib/hai/speakable";
-import { openInNewTab } from "@/lib/hai/open-tab";
+import { extractOpenAction, openInNewTab } from "@/lib/hai/open-tab";
 import { pickFemaleVoice } from "@/lib/hai/voice";
 import { haiChat, haiImage, listApiKeys } from "@/lib/hai/hai.functions";
 import {
@@ -961,7 +961,19 @@ export function CosmicApp() {
           ...(opts.spoken ? { spoken: true } : {}),
         },
       });
-      if (result.ok) {
+      const openAction = result.ok ? extractOpenAction(result.text) : null;
+      if (result.ok && openAction) {
+        // The AI recognised an "open this app/site" request that the shortcuts missed.
+        stopVoiceAssistant();
+        const opened = openInNewTab(openAction.url, (url, target) => window.open(url, target));
+        await settleAndSaveReply({
+          text: opened
+            ? `Opened ${openAction.label} in a new tab.`
+            : `Your browser stopped me from opening ${openAction.label}. Tap the button to open it in a new tab. To make this automatic, allow pop-ups for this site in your browser.`,
+          link: openAction,
+          meta: `${result.providerLabel} · ${result.model}`,
+        });
+      } else if (result.ok) {
         const failovers = result.attempts.length;
         const switched = result.model !== result.requestedModel;
         await settleAndSaveReply({
