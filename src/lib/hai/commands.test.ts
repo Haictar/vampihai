@@ -78,3 +78,45 @@ describe("spoken stop and browser actions", () => {
     expect(parseBrowserVoiceAction("open my heart")).toBeNull();
   });
 });
+
+describe("parseBrowserVoiceAction: open an app and play something", () => {
+  it("opens YouTube and plays the song asked for", () => {
+    expect(parseBrowserVoiceAction("Open YouTube and play Khat on it.")).toEqual({
+      url: "https://www.youtube.com/results?search_query=khat",
+      label: "YouTube",
+    });
+    expect(parseBrowserVoiceAction("Open YouTube and play cut.")).toEqual({
+      url: "https://www.youtube.com/results?search_query=cut",
+      label: "YouTube",
+    });
+  });
+
+  it("plays on Spotify when Spotify is named", () => {
+    expect(parseBrowserVoiceAction("play Khat on Spotify")).toEqual({
+      url: "https://open.spotify.com/search/khat",
+      label: "Spotify",
+    });
+    expect(parseBrowserVoiceAction("open spotify and play lofi beats")).toEqual({
+      url: "https://open.spotify.com/search/lofi%20beats",
+      label: "Spotify",
+    });
+  });
+
+  it("works for typed requests that name the site", () => {
+    expect(parseBrowserVoiceAction("open youtube and play khat", { typed: true })?.label).toBe(
+      "YouTube",
+    );
+    expect(parseBrowserVoiceAction("open spotify", { typed: true })?.url).toBe(
+      "https://open.spotify.com",
+    );
+    expect(parseBrowserVoiceAction("google cheap flights", { typed: true })?.url).toBe(
+      "https://www.google.com/search?q=cheap%20flights",
+    );
+  });
+
+  it("leaves typed questions that don't name a site for HAI to answer", () => {
+    expect(parseBrowserVoiceAction("play chess with me", { typed: true })).toBeNull();
+    expect(parseBrowserVoiceAction("look up the meaning of life", { typed: true })).toBeNull();
+    expect(parseBrowserVoiceAction("search for good recipes", { typed: true })).toBeNull();
+  });
+});

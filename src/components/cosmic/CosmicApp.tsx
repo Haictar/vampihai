@@ -472,6 +472,23 @@ export function CosmicApp() {
     }
   };
 
+  /** Opens a site or app in a new tab and says so in the chat (with a button if it was blocked). */
+  const runBrowserAction = (action: { url: string; label: string }) => {
+    const opened = openInNewTab(action.url, (url, target) => window.open(url, target));
+    setChatMessages((messages) => [
+      ...messages,
+      {
+        id: Date.now(),
+        role: "assistant",
+        text: opened
+          ? `Opened ${action.label} in a new tab.`
+          : `Your browser stopped me from opening ${action.label}. Tap the button to open it in a new tab. To make this automatic, allow pop-ups for this site in your browser.`,
+        link: { url: action.url, label: action.label },
+        local: true,
+      },
+    ]);
+  };
+
   /** A spoken sentence is either an app command ("new chat") or a question for HAI. */
   const handleSpoken = (before: string, spoken: string) => {
     const canRunCommand = !before.trim() && attachments.length === 0;
@@ -489,19 +506,7 @@ export function CosmicApp() {
     if (browserAction) {
       stopVoiceAssistant();
       setChatDraft(before);
-      const opened = openInNewTab(browserAction.url, (url, target) => window.open(url, target));
-      setChatMessages((messages) => [
-        ...messages,
-        {
-          id: Date.now(),
-          role: "assistant",
-          text: opened
-            ? `Opened ${browserAction.label} in a new tab.`
-            : `Your browser stopped me from opening ${browserAction.label} by voice. Tap the button to open it in a new tab. To make this automatic, allow pop-ups for this site in your browser.`,
-          link: { url: browserAction.url, label: browserAction.label },
-          local: true,
-        },
-      ]);
+      runBrowserAction(browserAction);
       return;
     }
     void sendChatMessage({ text: joinDraft(before, spoken), spoken: true });
@@ -723,6 +728,17 @@ export function CosmicApp() {
       chatMessages.some((message) => message.pending)
     )
       return;
+
+    // Typed "open YouTube and play Khat": the click/Enter lets the browser open the new tab.
+    if (opts.text === undefined && attachments.length === 0 && !imageMode) {
+      const typedAction = parseBrowserVoiceAction(text, { typed: true });
+      if (typedAction) {
+        setChatMessages((messages) => [...messages, { id: Date.now() - 1, role: "user", text, local: true }]);
+        setChatDraft("");
+        runBrowserAction(typedAction);
+        return;
+      }
+    }
 
     const sent = attachments;
     const images = sent.filter((a) => a.kind === "image").map((a) => a.dataUrl);

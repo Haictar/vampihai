@@ -112,26 +112,53 @@ function cleanSpoken(spoken: string): string {
     .trim();
 }
 
+const YOUTUBE_SEARCH = "https://www.youtube.com/results?search_query=";
+const SPOTIFY_SEARCH = "https://open.spotify.com/search/";
+
+function mediaSearch(app: string, query: string): BrowserVoiceAction | null {
+  const q = query.replace(/\s+(?:on it|there|for me|please)$/, "").trim();
+  if (!q) return null;
+  if (app === "spotify") return { url: `${SPOTIFY_SEARCH}${encodeURIComponent(q)}`, label: "Spotify" };
+  if (app === "google") {
+    return { url: `https://www.google.com/search?q=${encodeURIComponent(q)}`, label: "Google" };
+  }
+  return { url: `${YOUTUBE_SEARCH}${encodeURIComponent(q)}`, label: "YouTube" };
+}
+
 /**
- * Spoken requests the browser can do itself: "open YouTube", "go to example.com",
- * "search Google for cheap flights", "play lo-fi music on YouTube". Returns the page to open.
+ * Requests the browser can do itself: "open YouTube", "go to example.com",
+ * "search Google for cheap flights", "play lo-fi music on YouTube",
+ * "open YouTube and play Khat", "play Khat on Spotify". Returns the page to open.
+ * `typed` requests must name the site, so "play chess with me" typed stays a chat question.
  */
-export function parseBrowserVoiceAction(spoken: string): BrowserVoiceAction | null {
+export function parseBrowserVoiceAction(
+  spoken: string,
+  opts: { typed?: boolean } = {},
+): BrowserVoiceAction | null {
   const t = cleanSpoken(spoken);
+  // "open YouTube and play Khat (on it)", "go to Spotify and search for lo-fi"
+  const compound =
+    /^(?:open|go to|launch|visit)\s+(youtube|spotify|google)\s+and\s+(?:then\s+)?(?:play|search(?: for)?|find|look up|put on|show(?: me)?)\s+(.+)$/.exec(
+      t,
+    );
+  if (compound?.[1] && compound[2]) return mediaSearch(compound[1], compound[2]);
+  // "play Khat on Spotify", "search Spotify for Khat"
+  const spotify =
+    /^search spotify for (.+)$/.exec(t) ??
+    /^(?:play|search|find|look up|search for|put on) (.+?) on spotify$/.exec(t);
+  if (spotify?.[1]) return mediaSearch("spotify", spotify[1]);
   const youtube =
     /^search youtube for (.+)$/.exec(t) ??
-    /^(?:search|find|look up|search for) (.+?) on youtube$/.exec(t) ??
-    /^play (.+?)(?: on youtube)?$/.exec(t);
-  if (youtube?.[1]) {
+    /^(?:play|search|find|look up|search for|put on|show me) (.+?) on youtube$/.exec(t) ??
+    (opts.typed ? null : /^play (.+)$/.exec(t));
+  if (youtube?.[1]) return mediaSearch("youtube", youtube[1]);
+  const search = opts.typed
+    ? /^(?:google|search google for|search google|search (.+?) on google)\s*(.*)$/.exec(t)
+    : /^(?:google|search (?:google |the web |online )?for|search google|look up)\s+(.+)$/.exec(t);
+  const searchQuery = (search?.[1] || search?.[2] || "").trim();
+  if (searchQuery) {
     return {
-      url: `https://www.youtube.com/results?search_query=${encodeURIComponent(youtube[1].trim())}`,
-      label: "YouTube",
-    };
-  }
-  const search = /^(?:google|search (?:google |the web |online )?for|search google|look up)\s+(.+)$/.exec(t);
-  if (search?.[1]) {
-    return {
-      url: `https://www.google.com/search?q=${encodeURIComponent(search[1].trim())}`,
+      url: `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`,
       label: "Google",
     };
   }
