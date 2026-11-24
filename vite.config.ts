@@ -15,4 +15,23 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    // The WebGL scene is lazy-loaded, so Vite would discover these deps late and re-optimize
+    // mid-session, leaving the open page with two React copies. Pre-bundle them up front.
+    optimizeDeps: {
+      include: [
+        "orbloom",
+        "@supabase/supabase-js",
+        "@lovable.dev/cloud-auth-js",
+        "zod",
+        "three",
+        "three/examples/jsm/postprocessing/EffectComposer.js",
+        "three/examples/jsm/postprocessing/RenderPass.js",
+        "three/examples/jsm/postprocessing/ShaderPass.js",
+        "three/examples/jsm/postprocessing/UnrealBloomPass.js",
+        "three/examples/jsm/shaders/CopyShader.js",
+        "three/examples/jsm/shaders/GammaCorrectionShader.js",
+      ],
+    },
+  },
 });

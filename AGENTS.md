@@ -28,3 +28,12 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- The WebGL experience (three.js + orbloom) lives in `src/components/cosmic/` and is loaded on `/` via `React.lazy` inside `<ClientOnly>`; these libraries need the browser and must never be statically imported from a route. Keep every package it imports in `optimizeDeps.include` in vite.config.ts, or late dep discovery reloads the page with duplicate React.
+- Cosmic-scene styling lives in `src/cosmic.css`, imported at the top of `src/styles.css`; it was ported verbatim from the original Bolt app to keep the look identical.
+- HAI provider routing lives in `src/lib/hai/`: `providers.ts` (client-safe catalog + pure routing/URL rules, unit-tested; `orderRouteCandidates` decides chat order: chosen model, then the best other available model by `modelQualityScore`, capped by `MAX_ROUTE_ATTEMPTS`), `hai.server.ts` + `crypto.server.ts` (provider calls, AES-256-GCM key sealing), `hai.functions.ts` (auth-required server functions). All providers are called through their OpenAI-compatible `/chat/completions` endpoints so one call path serves every provider. Model lists come from `discovery.ts`: one adapter per provider in `MODEL_LIST_ADAPTERS` (official list URL, pagination, capability filter, whether the list proves the key) driven by a shared fetch loop, so adding a provider means adding an adapter, never a hardcoded model list.
+- Provider API keys: metadata in `api_keys` (owner can only SELECT/DELETE via RLS), ciphertext in `api_key_secrets` (service role only); inserts and status updates go through server functions with the admin client so the browser never sees a key or can fake a health status.
+- The schema (api_keys, api_key_secrets, hai_conversations, hai_messages, private `hai-chat-files` bucket) was recreated in one Lovable Cloud migration from the original project; chat history writes run as the signed-in user so RLS enforces ownership.
+- Voice uses the browser's own speech APIs (free, no gateway credits): `src/lib/hai/voice.ts` holds the pure wake-word and female-voice rules (unit-tested), `src/hooks/use-wake-word.ts` does background listening and pauses while HAI listens, thinks or speaks so it never hears itself, and `src/lib/hai/speakable.ts` decides what is read aloud.
