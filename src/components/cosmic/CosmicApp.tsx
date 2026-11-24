@@ -521,11 +521,18 @@ export function CosmicApp() {
 
   const toggleSpeech = () => {
     if (wake.capturing) {
-      stopVoiceAssistant();
+      wake.finish();
       return;
     }
     if (speech.listening) {
       speech.stop();
+      return;
+    }
+    // With "Hello HAI" on, the microphone is already open: reuse it so listening starts at once.
+    if (wake.listenNow()) {
+      // A tap is a single question, not a hands-free conversation.
+      conversationActiveRef.current = false;
+      setConversationActive(false);
       return;
     }
     window.speechSynthesis?.cancel();

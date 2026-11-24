@@ -31,6 +31,7 @@ export function useWakeWord(opts: {
   handlersRef.current = opts;
   const listenNowRef = useRef<(() => boolean) | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
+  const finishRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!opts.active) return;
@@ -48,9 +49,12 @@ export function useWakeWord(opts: {
     /** Results below this index were already used and are ignored. */
     let ignoreBelow = 0;
     let resultCount = 0;
+    /** Words heard so far for the current question. */
+    let heardText = "";
 
     const endQuestion = () => {
       question = null;
+      heardText = "";
       ignoreBelow = resultCount;
       clearTimeout(questionTimer);
       setCapturing(false);
@@ -76,6 +80,13 @@ export function useWakeWord(opts: {
     };
     cancelRef.current = () => {
       if (question) endQuestion();
+    };
+    finishRef.current = () => {
+      if (!question) return;
+      const text = heardText;
+      endQuestion();
+      if (text) handlersRef.current.onQuestion(text);
+      else handlersRef.current.onTimeout();
     };
 
     const begin = () => {
@@ -116,6 +127,7 @@ export function useWakeWord(opts: {
         }
         const heard = readQuestionAfterWake(phrases, question.from, question.skipWake);
         if (heard.text) {
+          heardText = heard.text;
           armTimeout();
           handlersRef.current.onInterim(heard.text);
         }
@@ -149,6 +161,7 @@ export function useWakeWord(opts: {
       stopped = true;
       listenNowRef.current = null;
       cancelRef.current = null;
+      finishRef.current = null;
       clearTimeout(restartTimer);
       clearTimeout(questionTimer);
       recognition?.abort();
@@ -161,6 +174,8 @@ export function useWakeWord(opts: {
   const listenNow = useCallback(() => listenNowRef.current?.() ?? false, []);
   /** Stops listening for the current question and goes back to waiting for "Hello HAI". */
   const cancel = useCallback(() => cancelRef.current?.(), []);
+  /** Stops listening now and sends whatever was already heard. */
+  const finish = useCallback(() => finishRef.current?.(), []);
 
-  return { listening, capturing, error, listenNow, cancel };
+  return { listening, capturing, error, listenNow, cancel, finish };
 }
