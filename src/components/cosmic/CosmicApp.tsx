@@ -43,6 +43,7 @@ import { speakableText } from "@/lib/hai/speakable";
 import { pickFemaleVoice } from "@/lib/hai/voice";
 import { haiChat, haiImage, listApiKeys } from "@/lib/hai/hai.functions";
 import {
+  deleteAllChatConversations,
   deleteChatConversation,
   listChatConversations,
   loadChatConversation,
@@ -164,6 +165,10 @@ const AUTO_MODEL = "auto";
 /** Remembers whether "Hello HAI" listening is switched on in this browser. */
 const WAKE_WORD_STORAGE_KEY = "hai-wake-word";
 const SKILL_PROFILES_STORAGE_KEY = "hai-skill-profiles-v1";
+/** Remembers which saved chat was open, per person, so a reload brings it back. */
+const lastConversationKey = (userId: string) => `hai-last-conversation:${userId}`;
+/** Marks saved replies that are HAI notices (errors, setup hints) so they aren't sent to models. */
+const NOTICE_META = "hai:notice";
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -198,6 +203,8 @@ export function CosmicApp() {
   const [historyError, setHistoryError] = useState("");
   const [isOpeningConversation, setIsOpeningConversation] = useState(false);
   const historyUserIdRef = useRef<string | null>(null);
+  /** Set once the person starts or opens another chat, so a slow restore doesn't replace it. */
+  const restoreCancelledRef = useRef(false);
 
   useEffect(() => {
     setWakeEnabled(window.localStorage.getItem(WAKE_WORD_STORAGE_KEY) !== "off");
@@ -262,6 +269,7 @@ export function CosmicApp() {
   const loadConversation = useServerFn(loadChatConversation);
   const saveMessage = useServerFn(saveChatMessage);
   const deleteConversation = useServerFn(deleteChatConversation);
+  const deleteAllConversations = useServerFn(deleteAllChatConversations);
   const persistentUserId = user && !user.is_anonymous ? user.id : null;
   const isPersistentUser = Boolean(persistentUserId);
   const [selectedModel, setSelectedModel] = useState(AUTO_MODEL);
@@ -286,6 +294,11 @@ export function CosmicApp() {
     setCurrentConversationId(null);
     setChatMessages(INITIAL_MESSAGES);
     setHistoryError("");
+    if (!nextUserId) return;
+    // Reopen the chat that was open last time, so a reload never looks like history was lost.
+    const lastId = window.localStorage.getItem(lastConversationKey(nextUserId));
+    restoreCancelledRef.current = false;
+    if (lastId) void openSavedConversation(lastId, { restoring: true });
   }, [persistentUserId]);
   const uniqueChatModels = useMemo(() => {
     const chatModels = (apiKeys.data ?? []).flatMap((key) =>
@@ -584,10 +597,18 @@ export function CosmicApp() {
     void addFiles(Array.from(event.dataTransfer.files));
   };
 
+  const rememberConversation = (id: string | null) => {
+    setCurrentConversationId(id);
+    if (!persistentUserId) return;
+    if (id) window.localStorage.setItem(lastConversationKey(persistentUserId), id);
+    else window.localStorage.removeItem(lastConversationKey(persistentUserId));
+  };
+
   const startNewConversation = () => {
+    restoreCancelledRef.current = true;
     window.speechSynthesis?.cancel();
     stopVoiceAssistant();
-    setCurrentConversationId(null);
+    rememberConversation(null);
     setHistoryError("");
     setChatMessages(INITIAL_MESSAGES);
     setChatDraft("");
@@ -597,18 +618,32 @@ export function CosmicApp() {
     setMenuView("nav");
   };
 
-  const openSavedConversation = async (id: string) => {
+  const openSavedConversation = async (id: string, opts: { restoring?: boolean } = {}) => {
+    if (!opts.restoring) restoreCancelledRef.current = true;
     setIsOpeningConversation(true);
     setHistoryError("");
     try {
       const result = await loadConversation({ data: { id } });
-      setCurrentConversationId(result.conversation.id);
-      setChatMessages([INITIAL_MESSAGES[0]!, ...result.messages]);
+      if (opts.restoring && restoreCancelledRef.current) return;
+      rememberConversation(result.conversation.id);
+      setChatMessages([
+        INITIAL_MESSAGES[0]!,
+        ...result.messages.map((message): ChatMessage => {
+          if (message.meta !== NOTICE_META) return message;
+          const { meta: _notice, ...rest } = message;
+          return { ...rest, local: true };
+        }),
+      ]);
       if (result.truncated) {
         setHistoryError("Showing the most recent 1,000 messages in this conversation.");
       }
-      setMenuOpen(false);
+      if (!opts.restoring) setMenuOpen(false);
     } catch (error) {
+      if (opts.restoring) {
+        // The chat was deleted elsewhere: just start fresh.
+        if (persistentUserId) window.localStorage.removeItem(lastConversationKey(persistentUserId));
+        return;
+      }
       setHistoryError(
         error instanceof Error ? error.message : "Could not load this saved conversation.",
       );
@@ -629,6 +664,20 @@ export function CosmicApp() {
       setHistoryError(
         error instanceof Error ? error.message : "Could not delete this conversation.",
       );
+    }
+  };
+
+  const removeAllSavedConversations = async () => {
+    if (!window.confirm("Delete all your saved chats and their pictures? This can't be undone."))
+      return;
+    setHistoryError("");
+    try {
+      const result = await deleteAllConversations();
+      startNewConversation();
+      await queryClient.invalidateQueries({ queryKey: ["hai-conversations", user?.id] });
+      if (result.warning) setHistoryError(result.warning);
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : "Could not delete your chat history.");
     }
   };
 
@@ -694,6 +743,7 @@ export function CosmicApp() {
       ...(files.length ? { files } : {}),
     };
     const pendingId = Date.now() + 1;
+    restoreCancelledRef.current = true;
     const history = [...chatMessages, userMessage];
     setChatMessages([
       ...history,
@@ -747,7 +797,7 @@ export function CosmicApp() {
         },
       });
       conversationId = saved.conversationId;
-      setCurrentConversationId(conversationId);
+      rememberConversation(conversationId);
       setChatMessages((messages) =>
         messages.map((message) =>
           message.id === userMessage.id
@@ -774,10 +824,12 @@ export function CosmicApp() {
     }
 
     const settleAndSaveReply = async (reply: Omit<ChatMessage, "id" | "role">) => {
-      if (reply.local || !conversationId) {
+      if (!conversationId) {
         settle(reply);
         return;
       }
+      // Every reply is saved, notices included, so history matches what was on screen.
+      const meta = reply.local ? NOTICE_META : reply.meta;
       try {
         const saved = await saveMessage({
           data: {
@@ -786,7 +838,7 @@ export function CosmicApp() {
             text: reply.text,
             ...(reply.image ? { image: reply.image } : {}),
             ...(reply.imagePrompt ? { imagePrompt: reply.imagePrompt } : {}),
-            ...(reply.meta ? { meta: reply.meta } : {}),
+            ...(meta ? { meta } : {}),
             ...(reply.sources ? { sources: reply.sources } : {}),
           },
         });
@@ -811,7 +863,7 @@ export function CosmicApp() {
     if (wantsImage) {
       const prompt = imagePrompt(text);
       if (!prompt) {
-        settle({
+        await settleAndSaveReply({
           text: "Describe the picture you want, then send it with the image button on.",
           local: true,
         });
@@ -840,10 +892,10 @@ export function CosmicApp() {
             meta: `${result.provider} · ${result.model}${result.fallbackReason ? ` · ${result.fallbackReason}` : ""}`,
           });
         } else {
-          settle({ text: result.message, local: true });
+          await settleAndSaveReply({ text: result.message, local: true });
         }
       } catch {
-        settle({
+        await settleAndSaveReply({
           text: "The image maker couldn't finish this picture. Please try again.",
           local: true,
         });
@@ -1062,6 +1114,16 @@ export function CosmicApp() {
             <div className="side-menu__section-title">
               <History aria-hidden="true" />
               <span>Chat history</span>
+              {isPersistentUser && savedConversations.length > 0 && (
+                <button
+                  type="button"
+                  className="history-clear"
+                  onClick={() => void removeAllSavedConversations()}
+                  disabled={isWaiting || isOpeningConversation}
+                >
+                  Clear all
+                </button>
+              )}
             </div>
             {isPersistentUser ? (
               <>

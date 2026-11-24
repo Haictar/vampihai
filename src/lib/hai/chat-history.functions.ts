@@ -435,3 +435,43 @@ export const deleteChatConversation = createServerFn({ method: "POST" })
     }
     return { deleted: data.id };
   });
+
+/** Deletes every saved conversation (and its private pictures) for the signed-in person. */
+export const deleteAllChatConversations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    requireGoogleAccount(context.claims);
+    const client = historyClient(context.supabase);
+    const imagePaths: string[] = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data: messages, error } = await client
+        .from("hai_messages")
+        .select("image_paths, image_path")
+        .eq("user_id", context.userId)
+        .order("created_at", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) throw new Error("Could not prepare your chat history for deletion.");
+      for (const message of messages ?? []) {
+        imagePaths.push(...(message.image_paths ?? []), ...(message.image_path ? [message.image_path] : []));
+      }
+      if ((messages ?? []).length < PAGE) break;
+    }
+    const { error: deleteError } = await client
+      .from("hai_conversations")
+      .delete()
+      .eq("user_id", context.userId);
+    if (deleteError) throw new Error("Could not delete your chat history.");
+    let cleanupFailed = false;
+    for (let i = 0; i < imagePaths.length; i += 100) {
+      const { error } = await client.storage
+        .from(CHAT_STORAGE_BUCKET)
+        .remove(imagePaths.slice(i, i + 100));
+      if (error) cleanupFailed = true;
+    }
+    if (cleanupFailed) {
+      console.error("chat history image cleanup failed");
+      return { warning: "Some private image files could not be removed." };
+    }
+    return {};
+  });
