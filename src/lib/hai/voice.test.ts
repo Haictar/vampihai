@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findWakeWord, pickFemaleVoice } from "./voice";
+import { findWakeWord, pickFemaleVoice, readQuestionAfterWake } from "./voice";
 
 describe("findWakeWord", () => {
   it("hears 'Hello HAI' however the browser spells HAI", () => {
@@ -41,5 +41,46 @@ describe("pickFemaleVoice", () => {
 
   it("returns null when the browser has no voices yet", () => {
     expect(pickFemaleVoice([], "en-US")).toBeNull();
+  });
+});
+
+describe("readQuestionAfterWake", () => {
+  it("keeps listening when only the wake word was said", () => {
+    expect(readQuestionAfterWake([{ transcript: "hello hai", isFinal: true }], 0, true)).toEqual({
+      text: "",
+      done: false,
+    });
+  });
+
+  it("sends the words said in the same breath as the wake word", () => {
+    expect(
+      readQuestionAfterWake([{ transcript: "hello hai open youtube", isFinal: true }], 0, true),
+    ).toEqual({ text: "open youtube", done: true });
+  });
+
+  it("waits while the person is still speaking", () => {
+    expect(
+      readQuestionAfterWake([{ transcript: "hello hai what is the", isFinal: false }], 0, true),
+    ).toEqual({ text: "what is the", done: false });
+  });
+
+  it("joins a question asked after a short pause", () => {
+    expect(
+      readQuestionAfterWake(
+        [
+          { transcript: "something earlier", isFinal: true },
+          { transcript: "hello hai", isFinal: true },
+          { transcript: "what time is it", isFinal: true },
+        ],
+        1,
+        true,
+      ),
+    ).toEqual({ text: "what time is it", done: true });
+  });
+
+  it("reads a follow-up question without needing the wake word", () => {
+    expect(
+      readQuestionAfterWake([{ transcript: "and tomorrow", isFinal: true }], 0, false),
+    ).toEqual({ text: "and tomorrow", done: true });
   });
 });

@@ -164,8 +164,6 @@ const AUTO_MODEL = "auto";
 /** Remembers whether "Hello HAI" listening is switched on in this browser. */
 const WAKE_WORD_STORAGE_KEY = "hai-wake-word";
 const SKILL_PROFILES_STORAGE_KEY = "hai-skill-profiles-v1";
-/** Speaking id used for HAI's short "Yes?" after the wake word. */
-const WAKE_REPLY_ID = -1;
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -189,7 +187,6 @@ export function CosmicApp() {
   const speakingIdRef = useRef<number | string | null>(null);
   const draftBeforeVoiceRef = useRef("");
   const [wakeEnabled, setWakeEnabled] = useState(false);
-  const [awaitingCommand, setAwaitingCommand] = useState(false);
   const [conversationActive, setConversationActive] = useState(false);
   const conversationActiveRef = useRef(false);
   const [voiceName, setVoiceName] = useState("");
@@ -448,9 +445,9 @@ export function CosmicApp() {
   const stopVoiceAssistant = () => {
     conversationActiveRef.current = false;
     setConversationActive(false);
-    setAwaitingCommand(false);
     draftBeforeVoiceRef.current = "";
     speech.abort();
+    wakeCancelRef.current?.();
     window.speechSynthesis?.cancel();
     if (speakingIdRef.current !== null) {
       speakingIdRef.current = null;
@@ -484,24 +481,37 @@ export function CosmicApp() {
 
   const isWaiting = chatMessages.some((m) => m.pending);
   const wake = useWakeWord({
-    active: wakeEnabled && !speech.listening && !isWaiting && !awaitingCommand,
-    onWake: (rest) => {
+    active: wakeEnabled && !speech.listening && !isWaiting,
+    // "Hello HAI": stop any reply being read and listen for the question straight away.
+    onWake: () => {
       conversationActiveRef.current = true;
       setConversationActive(true);
-      if (rest) {
-        handleSpoken("", rest);
-        return;
+      if (speakingIdRef.current !== null) {
+        speakingIdRef.current = null;
+        setSpeakingId(null);
       }
-      // Only the wake word: answer "Yes?" in HAI's voice, then listen for the question.
-      setAwaitingCommand(true);
-      readAloud(WAKE_REPLY_ID, "Yes?", () => {
-        draftBeforeVoiceRef.current = "";
-        setAwaitingCommand(false);
-        speech.start();
-      });
+      window.speechSynthesis?.cancel();
+      draftBeforeVoiceRef.current = chatDraft;
+    },
+    onInterim: (spoken) => setChatDraft(joinDraft(draftBeforeVoiceRef.current, spoken)),
+    onQuestion: (spoken) => handleSpoken(draftBeforeVoiceRef.current, spoken),
+    onTimeout: () => {
+      conversationActiveRef.current = false;
+      setConversationActive(false);
+      setChatDraft(draftBeforeVoiceRef.current);
+      draftBeforeVoiceRef.current = "";
     },
     onStop: stopVoiceAssistant,
   });
+  const wakeCancelRef = useRef(wake.cancel);
+  wakeCancelRef.current = wake.cancel;
+  /** Listens for a follow-up question, reusing the "Hello HAI" microphone when it is on. */
+  const listenForFollowUp = () => {
+    if (!wake.listenNow()) {
+      draftBeforeVoiceRef.current = "";
+      speech.start();
+    }
+  };
 
   const toggleWakeWord = () => {
     const next = !wakeEnabled;
@@ -510,6 +520,10 @@ export function CosmicApp() {
   };
 
   const toggleSpeech = () => {
+    if (wake.capturing) {
+      stopVoiceAssistant();
+      return;
+    }
     if (speech.listening) {
       speech.stop();
       return;
@@ -700,7 +714,7 @@ export function CosmicApp() {
       // A spoken command gets a spoken answer.
       if (opts.spoken && reply.text) {
         readAloud(replyId, reply.text, () => {
-          if (conversationActiveRef.current) speech.start();
+          if (conversationActiveRef.current) listenForFollowUp();
         });
       }
     };
@@ -880,16 +894,17 @@ export function CosmicApp() {
     }
   };
 
-  const orbState: OrbState = speech.listening
+  const voiceListening = speech.listening || wake.capturing;
+  const orbState: OrbState = voiceListening
     ? "listening"
     : speakingId !== null
       ? "speaking"
       : isWaiting
         ? "thinking"
         : "idle";
-  const voiceLive = speech.listening || speakingId !== null;
+  const voiceLive = voiceListening || speakingId !== null;
   const composerError = speech.error || attachError || (wakeEnabled ? wake.error : "");
-  const composerNote = speech.listening
+  const composerNote = voiceListening
     ? "Listening… say your message or command. HAI sends it when you pause."
     : composerError || (wake.listening ? "Say “Hello HAI” to talk to me." : "");
 
@@ -1258,7 +1273,7 @@ export function CosmicApp() {
         )}
         {composerNote && (
           <p
-            className={`chat-composer-note ${composerError && !speech.listening ? "is-error" : ""}`}
+            className={`chat-composer-note ${composerError && !voiceListening ? "is-error" : ""}`}
             role="status"
           >
             {composerNote}
@@ -1346,15 +1361,15 @@ export function CosmicApp() {
           />
           <button
             type="button"
-            className={`chat-composer__tool ${speech.listening ? "is-active is-listening" : ""}`}
+            className={`chat-composer__tool ${voiceListening ? "is-active is-listening" : ""}`}
             onClick={toggleSpeech}
-            aria-pressed={speech.listening}
-            aria-label={speech.listening ? "Stop listening" : "Speak to HAI"}
+            aria-pressed={voiceListening}
+            aria-label={voiceListening ? "Stop listening" : "Speak to HAI"}
             title={
               speech.supported ? "Speak to HAI" : "Voice input isn't supported in this browser"
             }
           >
-            {speech.listening ? <Square aria-hidden="true" /> : <Mic aria-hidden="true" />}
+            {voiceListening ? <Square aria-hidden="true" /> : <Mic aria-hidden="true" />}
           </button>
           <button
             type="submit"

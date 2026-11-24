@@ -14,6 +14,36 @@ export function findWakeWord(heard: string): { rest: string } | null {
   return { rest: heard.slice(match.index + match[0].length).trim() };
 }
 
+export interface HeardPhrase {
+  transcript: string;
+  isFinal: boolean;
+}
+
+/**
+ * After "Hello HAI", HAI keeps the same microphone session open and reads the question straight
+ * from it, so nothing has to restart. `from` is the first phrase that belongs to the question;
+ * when `skipWake` is set that phrase still starts with the wake word, which is dropped.
+ * The question is `done` once the newest phrase is final and something was actually said.
+ */
+export function readQuestionAfterWake(
+  phrases: readonly HeardPhrase[],
+  from: number,
+  skipWake: boolean,
+): { text: string; done: boolean } {
+  const parts: string[] = [];
+  let lastFinal = false;
+  for (let i = Math.max(0, from); i < phrases.length; i++) {
+    const phrase = phrases[i]!;
+    let words = phrase.transcript;
+    if (i === from && skipWake) words = findWakeWord(words)?.rest ?? "";
+    words = words.trim();
+    if (words) parts.push(words);
+    lastFinal = phrase.isFinal;
+  }
+  const text = parts.join(" ");
+  return { text, done: Boolean(text) && lastFinal };
+}
+
 export interface VoiceLike {
   name: string;
   lang: string;
