@@ -12,7 +12,15 @@ import {
   type DiscoveredModel,
   type StoredModel,
 } from "./discovery";
-import { getProvider, type KeyStatus, type ProviderId } from "./providers";
+import { getProvider, modelQualityScore, type KeyStatus, type ProviderId } from "./providers";
+
+/** Models probed when a key is added or refreshed; the rest stay "untested" so adding a key is fast. */
+export const MAX_PROBED_MODELS = 12;
+const PROBE_CONCURRENCY = 12;
+
+export function pickModelsToProbe(ids: string[]): string[] {
+  return [...ids].sort((a, b) => modelQualityScore(b) - modelQualityScore(a)).slice(0, MAX_PROBED_MODELS);
+}
 
 export const KEY_COLUMNS =
   "id, provider, model, models, models_refreshed_at, models_error, label, base_url, status, last_error, last_tested_at, last_used_at, created_at" as const;
@@ -300,7 +308,7 @@ async function probeStoredModel(row: StoredKeyRow, modelId: string, apiKey: stri
     model: modelId,
     messages: [{ role: "user", content: "Reply with OK." }],
     maxTokens: 16,
-    timeoutMs: 20000,
+    timeoutMs: 12000,
   });
   if (result.ok && result.text) {
     return { health: "available" as const, error: null, authFailure: false };
@@ -320,7 +328,8 @@ export async function testStoredModels(
   modelIds?: string[],
 ) {
   const models = readStoredModels(row.models);
-  const candidates = modelIds ? models.filter((model) => modelIds.includes(model.id)) : models;
+  const wanted = new Set(pickModelsToProbe(modelIds ?? models.map((model) => model.id)));
+  const candidates = models.filter((model) => wanted.has(model.id));
   const apiKey = knownApiKey ?? (await loadSecrets([row.id])).get(row.id);
   if (!apiKey) {
     const error = "Stored key could not be read.";
@@ -330,8 +339,8 @@ export async function testStoredModels(
     });
   }
   const results: Array<Awaited<ReturnType<typeof probeStoredModel>>> = [];
-  for (let offset = 0; offset < candidates.length; offset += 4) {
-    const batch = candidates.slice(offset, offset + 4);
+  for (let offset = 0; offset < candidates.length; offset += PROBE_CONCURRENCY) {
+    const batch = candidates.slice(offset, offset + PROBE_CONCURRENCY);
     results.push(
       ...(await Promise.all(batch.map((model) => probeStoredModel(row, model.id, apiKey)))),
     );

@@ -310,7 +310,7 @@ export const haiChat = createServerFn({ method: "POST" })
     // A key the provider rejected is skipped for the rest of this message.
     const rejectedKeys = new Set<string>();
 
-    for (const { key, model } of candidates) {
+    for (const [index, { key, model }] of candidates.entries()) {
       if (rejectedKeys.has(key.id)) continue;
       const provider = getProvider(key.provider as ProviderId);
       const apiKey = secrets.get(key.id);
@@ -325,10 +325,12 @@ export const haiChat = createServerFn({ method: "POST" })
         apiKey,
         model,
         messages,
-        timeoutMs: 45000,
+        // Backup models get less time so a failing chain doesn't leave you waiting minutes.
+        timeoutMs: index === 0 ? 40000 : 25000,
       });
       if (result.ok && result.text) {
-        await recordKeyResult(key.id, "healthy", null, true);
+        // Health bookkeeping must not delay the reply.
+        void recordKeyResult(key.id, "healthy", null, true).catch(() => undefined);
         return {
           ok: true,
           text: result.text,

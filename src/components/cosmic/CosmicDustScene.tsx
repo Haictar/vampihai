@@ -96,7 +96,7 @@ export function CosmicDustScene() {
 
     let renderer: THREE.WebGL1Renderer;
     try {
-      renderer = new THREE.WebGL1Renderer({ canvas, antialias: true });
+      renderer = new THREE.WebGL1Renderer({ canvas, antialias: false, powerPreference: "high-performance" });
     } catch {
       setError(true);
       return;
@@ -104,7 +104,8 @@ export function CosmicDustScene() {
 
     const w = () => window.innerWidth;
     const h = () => window.innerHeight;
-    const dpr = () => window.devicePixelRatio;
+    // Three bloom passes per frame: cap the pixel ratio so high-DPI screens stay smooth.
+    const dpr = () => Math.min(window.devicePixelRatio, 1.25);
 
     renderer.setPixelRatio(dpr());
     renderer.shadowMap.enabled = true;
@@ -230,6 +231,10 @@ export function CosmicDustScene() {
 
     let animationFrame = 0;
     const render = () => {
+      if (document.hidden) {
+        animationFrame = requestAnimationFrame(render);
+        return;
+      }
       const now = performance.now();
       finalPass.uniforms["iTime"]!.value = now / 1000;
       uniforms.iTime.value = now / 1000;
