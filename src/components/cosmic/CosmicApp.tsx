@@ -861,6 +861,9 @@ export function CosmicApp() {
       }
       // Every reply is saved, notices included, so history matches what was on screen.
       const meta = reply.local ? NOTICE_META : reply.meta;
+      // Text replies show at once; saving finishes in the background so chat feels instant.
+      const showFirst = !reply.image;
+      if (showFirst) settle(reply);
       try {
         const saved = await saveMessage({
           data: {
@@ -876,6 +879,12 @@ export function CosmicApp() {
         if (saved.warning) setHistoryError(saved.warning);
         else setHistoryError("");
         void queryClient.invalidateQueries({ queryKey: ["hai-conversations", user.id] });
+        if (showFirst) {
+          setChatMessages((messages) =>
+            messages.map((m) => (m.id === pendingId ? { ...m, id: saved.message.id } : m)),
+          );
+          return;
+        }
         settle(
           {
             ...reply,
@@ -887,7 +896,7 @@ export function CosmicApp() {
         setHistoryError(
           error instanceof Error ? error.message : "The reply could not be saved to chat history.",
         );
-        settle(reply);
+        if (!showFirst) settle(reply);
       }
     };
 

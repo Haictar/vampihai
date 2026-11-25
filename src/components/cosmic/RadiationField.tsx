@@ -190,7 +190,7 @@ export function RadiationField({ active }: RadiationFieldProps) {
     }
 
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 20);
@@ -278,7 +278,7 @@ export function RadiationField({ active }: RadiationFieldProps) {
       });
 
       (beams.material as THREE.LineBasicMaterial).opacity = 0.3 + Math.sin(animationTime * 2.1) * 0.08 + (energy - 1) * 0.45;
-      renderer.render(scene, camera);
+      if (!document.hidden) renderer.render(scene, camera);
       animationFrame = requestAnimationFrame(render);
     };
 
