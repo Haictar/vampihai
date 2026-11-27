@@ -1,4 +1,4 @@
-// Server-only: HAI's built-in image maker (Lovable AI Gateway). Needs no user API key.
+// Server-only: Jimmy's built-in image maker (Lovable AI Gateway). Needs no user API key.
 import {
   GatewayError,
   PaymentRequiredError,
@@ -10,7 +10,7 @@ import {
 } from "@lovable.dev/ai-gateway";
 
 const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst" as const;
-export const IMAGE_MAKER_LABEL = "HAI image maker";
+export const IMAGE_MAKER_LABEL = "Jimmy image maker";
 export const IMAGE_MODEL_NAME = "gpt-image-2.5";
 
 export type HaiImageResult =
@@ -19,7 +19,7 @@ export type HaiImageResult =
       dataUrl: string;
       provider: string;
       model: string;
-      /** Why HAI used a different image model than the first choice, when it did. */
+      /** Why Jimmy used a different image model than the first choice, when it did. */
       fallbackReason?: string;
     }
   | { ok: false; message: string };

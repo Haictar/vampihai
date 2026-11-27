@@ -28,7 +28,7 @@ interface SkillManagerProps {
   onChange: (profiles: SkillProfileSettings) => void;
 }
 
-/** Lets a person pin the models HAI tries first for each kind of request. */
+/** Lets a person pin the models Jimmy tries first for each kind of request. */
 export function SkillManager({ profiles, models, error, onChange }: SkillManagerProps) {
   const [drafts, setDrafts] = useState<Partial<Record<SkillId, string>>>({});
 
@@ -44,7 +44,7 @@ export function SkillManager({ profiles, models, error, onChange }: SkillManager
   return (
     <div className="skill-manager">
       <p className="skill-manager__intro">
-        When the model picker is on <strong>Auto</strong>, HAI spots what you're asking for and
+        When the model picker is on <strong>Auto</strong>, Jimmy spots what you're asking for and
         tries your pinned models first, then the best other ones.
       </p>
       {error && (
@@ -112,9 +112,9 @@ export function SkillManager({ profiles, models, error, onChange }: SkillManager
               <p className="skill-profile__empty">
                 {options.length === 0
                   ? skill.id === "image"
-                    ? "No picture models from your keys yet, so HAI uses its built-in image maker."
+                    ? "No picture models from your keys yet, so Jimmy uses its built-in image maker."
                     : "Add an API key with working chat models to choose models here."
-                  : "Automatic: HAI picks the best model for this skill."}
+                  : "Automatic: Jimmy picks the best model for this skill."}
               </p>
             )}
             {addable.length > 0 && (

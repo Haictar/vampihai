@@ -102,7 +102,7 @@ type ChatMessage = {
   meta?: string;
   sources?: GroundingSource[];
   pending?: boolean;
-  /** A website or app HAI opened (or couldn't open) by voice; shown as a new-tab button. */
+  /** A website or app Jimmy opened (or couldn't open) by voice; shown as a new-tab button. */
   link?: { url: string; label: string };
   /** Local notices (sign-in prompts, errors) are not sent back to the model. */
   local?: boolean;
@@ -163,15 +163,15 @@ function displayName(user: { user_metadata?: Record<string, unknown> | null }): 
   return typeof name === "string" && name.trim() ? name : undefined;
 }
 
-/** Model picker value that lets HAI choose the best available model. */
+/** Model picker value that lets Jimmy choose the best available model. */
 const AUTO_MODEL = "auto";
 
-/** Remembers whether "Hello HAI" listening is switched on in this browser. */
+/** Remembers whether "Hello Jimmy" listening is switched on in this browser. */
 const WAKE_WORD_STORAGE_KEY = "hai-wake-word";
 const SKILL_PROFILES_STORAGE_KEY = "hai-skill-profiles-v1";
 /** Remembers which saved chat was open, per person, so a reload brings it back. */
 const lastConversationKey = (userId: string) => `hai-last-conversation:${userId}`;
-/** Marks saved replies that are HAI notices (errors, setup hints) so they aren't sent to models. */
+/** Marks saved replies that are Jimmy notices (errors, setup hints) so they aren't sent to models. */
 const NOTICE_META = "hai:notice";
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -403,7 +403,7 @@ export function CosmicApp() {
     setMenuOpen(!effectiveMobile);
   }, [effectiveMobile]);
 
-  /** Reads a reply aloud in HAI's female voice, or stops if that reply is already being read. */
+  /** Reads a reply aloud in Jimmy's female voice, or stops if that reply is already being read. */
   const readAloud = (id: number | string, text: string, onDone?: () => void) => {
     const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
     if (!synth) {
@@ -489,7 +489,7 @@ export function CosmicApp() {
     ]);
   };
 
-  /** A spoken sentence is either an app command ("new chat") or a question for HAI. */
+  /** A spoken sentence is either an app command ("new chat") or a question for Jimmy. */
   const handleSpoken = (before: string, spoken: string) => {
     const canRunCommand = !before.trim() && attachments.length === 0;
     const command = canRunCommand ? matchVoiceCommand(spoken) : null;
@@ -515,7 +515,7 @@ export function CosmicApp() {
   const isWaiting = chatMessages.some((m) => m.pending);
   const wake = useWakeWord({
     active: wakeEnabled && !speech.listening && !isWaiting,
-    // "Hello HAI": stop any reply being read and listen for the question straight away.
+    // "Hello Jimmy": stop any reply being read and listen for the question straight away.
     onWake: () => {
       conversationActiveRef.current = true;
       setConversationActive(true);
@@ -538,7 +538,7 @@ export function CosmicApp() {
   });
   const wakeCancelRef = useRef(wake.cancel);
   wakeCancelRef.current = wake.cancel;
-  /** Listens for a follow-up question, reusing the "Hello HAI" microphone when it is on. */
+  /** Listens for a follow-up question, reusing the "Hello Jimmy" microphone when it is on. */
   const listenForFollowUp = () => {
     if (!wake.listenNow()) {
       draftBeforeVoiceRef.current = "";
@@ -561,7 +561,7 @@ export function CosmicApp() {
       speech.stop();
       return;
     }
-    // With "Hello HAI" on, the microphone is already open: reuse it so listening starts at once.
+    // With "Hello Jimmy" on, the microphone is already open: reuse it so listening starts at once.
     if (wake.listenNow()) {
       // A tap is a single question, not a hands-free conversation.
       conversationActiveRef.current = false;
@@ -809,7 +809,7 @@ export function CosmicApp() {
 
     if (!user || user.is_anonymous) {
       settle({
-        text: "Sign in with Google to save your chats and use HAI.",
+        text: "Sign in with Google to save your chats and use Jimmy.",
         local: true,
       });
       return;
@@ -1007,7 +1007,7 @@ export function CosmicApp() {
 
   /**
    * Saved pictures live on another address, where browsers ignore "download" and would replace
-   * the HAI tab. Fetch the picture and save it as a file; if that fails, open it in a new tab.
+   * the Jimmy tab. Fetch the picture and save it as a file; if that fails, open it in a new tab.
    */
   const downloadImage = async (url: string) => {
     try {
@@ -1016,7 +1016,7 @@ export function CosmicApp() {
       const objectUrl = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = "hai-image.jpg";
+      link.download = "jimmy-image.jpg";
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1037,8 +1037,8 @@ export function CosmicApp() {
   const voiceLive = voiceListening || speakingId !== null;
   const composerError = speech.error || attachError || (wakeEnabled ? wake.error : "");
   const composerNote = voiceListening
-    ? "Listening… say your message or command. HAI sends it when you pause."
-    : composerError || (wake.listening ? "Say “Hello HAI” to talk to me." : "");
+    ? "Listening… say your message or command. Jimmy sends it when you pause."
+    : composerError || (wake.listening ? "Say “Hello Jimmy” to talk to me." : "");
 
   return (
     <div className={`cosmic-experience ${effectiveMobile ? "is-mobile-mode" : ""}`}>
@@ -1082,7 +1082,7 @@ export function CosmicApp() {
             </span>
             <div>
               <p className="chat-eyebrow">ORBITAL</p>
-              <h2>HAI</h2>
+              <h2>Jimmy</h2>
             </div>
           </div>
           <button
@@ -1144,16 +1144,16 @@ export function CosmicApp() {
             </div>
             <div className="settings-option">
               <div className="settings-option__text">
-                <strong>Wake word “Hello HAI”</strong>
+                <strong>Wake word “Hello Jimmy”</strong>
                 <small>
-                  Say “Hello HAI” and ask your question. HAI listens while this page is open.
+                  Say “Hello Jimmy” and ask your question. Jimmy listens while this page is open.
                 </small>
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={wakeEnabled}
-                aria-label="Wake word Hello HAI"
+                aria-label="Wake word Hello Jimmy"
                 className={`settings-switch ${wakeEnabled ? "is-on" : ""}`}
                 onClick={toggleWakeWord}
               >
@@ -1303,7 +1303,7 @@ export function CosmicApp() {
           </>
         )}
       </aside>
-      <section className="chat-interface" aria-label="HAI chat">
+      <section className="chat-interface" aria-label="Jimmy chat">
         <div className="chat-messages" aria-live="polite" ref={messagesRef}>
           {chatMessages.map((message) => (
             <div key={message.id} className={`chat-message chat-message--${message.role}`}>
@@ -1365,7 +1365,7 @@ export function CosmicApp() {
                       <img src={message.image} alt={message.imagePrompt ?? "Generated image"} />
                       <a
                         href={message.image}
-                        download="hai-image.jpg"
+                        download="jimmy-image.jpg"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="chat-image__download"
@@ -1514,8 +1514,8 @@ export function CosmicApp() {
                 void sendChatMessage();
               }
             }}
-            placeholder={imageMode ? "Describe the image to create…" : "Ask HAI anything…"}
-            aria-label="Message HAI"
+            placeholder={imageMode ? "Describe the image to create…" : "Ask Jimmy anything…"}
+            aria-label="Message Jimmy"
             rows={1}
           />
           <button
@@ -1523,9 +1523,9 @@ export function CosmicApp() {
             className={`chat-composer__tool ${voiceListening ? "is-active is-listening" : ""}`}
             onClick={toggleSpeech}
             aria-pressed={voiceListening}
-            aria-label={voiceListening ? "Stop listening" : "Speak to HAI"}
+            aria-label={voiceListening ? "Stop listening" : "Speak to Jimmy"}
             title={
-              speech.supported ? "Speak to HAI" : "Voice input isn't supported in this browser"
+              speech.supported ? "Speak to Jimmy" : "Voice input isn't supported in this browser"
             }
           >
             {voiceListening ? <Square aria-hidden="true" /> : <Mic aria-hidden="true" />}

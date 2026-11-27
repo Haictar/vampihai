@@ -8,6 +8,7 @@ describe("image requests", () => {
     expect(isImageRequest("make a logo for my bakery")).toBe(true);
     expect(isImageRequest("draw a dragon over a city")).toBe(true);
     expect(isImageRequest("/image neon sunset")).toBe(true);
+    expect(isImageRequest("hey Jimmy, generate a picture of a cat")).toBe(true);
   });
 
   it("keeps questions and coding requests as normal chat", () => {
@@ -24,7 +25,7 @@ describe("image requests", () => {
 describe("spoken app commands", () => {
   it("recognises spoken navigation commands", () => {
     expect(matchVoiceCommand("New conversation.")).toBe("new_chat");
-    expect(matchVoiceCommand("hey HAI, open the API manager")).toBe("open_api_manager");
+    expect(matchVoiceCommand("hey Jimmy, open the API manager")).toBe("open_api_manager");
     expect(matchVoiceCommand("open settings")).toBe("open_settings");
   });
 
@@ -37,12 +38,12 @@ describe("spoken app commands", () => {
 describe("spoken stop and browser actions", () => {
   it("treats 'stop' and 'goodbye' as ending the voice conversation", () => {
     expect(matchVoiceCommand("Stop.")).toBe("stop_assistant");
-    expect(matchVoiceCommand("goodbye HAI")).toBe("stop_assistant");
+    expect(matchVoiceCommand("goodbye Jimmy")).toBe("stop_assistant");
     expect(matchVoiceCommand("stop the timer at five")).toBeNull();
   });
 
   it("opens well-known sites by name", () => {
-    expect(parseBrowserVoiceAction("open YouTube")).toEqual({
+    expect(parseBrowserVoiceAction("hey Jimmy, open YouTube")).toEqual({
       url: "https://www.youtube.com",
       label: "YouTube",
     });
@@ -73,7 +74,7 @@ describe("spoken stop and browser actions", () => {
     });
   });
 
-  it("leaves ordinary questions for HAI", () => {
+  it("leaves ordinary questions for Jimmy", () => {
     expect(parseBrowserVoiceAction("what is the capital of France")).toBeNull();
     expect(parseBrowserVoiceAction("open my heart")).toBeNull();
   });
@@ -114,7 +115,7 @@ describe("parseBrowserVoiceAction: open an app and play something", () => {
     );
   });
 
-  it("leaves typed questions that don't name a site for HAI to answer", () => {
+  it("leaves typed questions that don't name a site for Jimmy to answer", () => {
     expect(parseBrowserVoiceAction("play chess with me", { typed: true })).toBeNull();
     expect(parseBrowserVoiceAction("look up the meaning of life", { typed: true })).toBeNull();
     expect(parseBrowserVoiceAction("search for good recipes", { typed: true })).toBeNull();

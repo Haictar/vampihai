@@ -32,7 +32,7 @@ export function getRecognitionCtor(): SpeechRecognitionCtor | null {
 }
 
 const ERROR_TEXT: Record<string, string> = {
-  "not-allowed": "Microphone permission was denied. Allow the microphone to speak to HAI.",
+  "not-allowed": "Microphone permission was denied. Allow the microphone to speak to Jimmy.",
   "service-not-allowed": "Voice input isn't allowed in this browser.",
   "no-speech": "I didn't hear anything. Tap the microphone and try again.",
   "audio-capture": "No microphone was found.",

@@ -4,24 +4,24 @@ import { STOP_PHRASE } from "@/lib/hai/commands";
 import { findWakeWord, readQuestionAfterWake, type HeardPhrase } from "@/lib/hai/voice";
 
 const RESTART_DELAY_MS = 250;
-/** How long HAI waits for a question after "Hello HAI" before going back to sleep. */
+/** How long Jimmy waits for a question after "Hello Jimmy" before going back to sleep. */
 const QUESTION_TIMEOUT_MS = 8000;
 
 /**
- * Listens in the background for "Hello HAI" while `active`. When heard, HAI starts listening
+ * Listens in the background for "Hello Jimmy" while `active`. When heard, Jimmy starts listening
  * for the question at once in the same microphone session (no restart, no spoken reply), streams
  * the words through `onInterim` and hands the finished sentence to `onQuestion`.
  * `listenNow()` does the same without the wake word, for follow-up questions.
  */
 export function useWakeWord(opts: {
   active: boolean;
-  /** "Hello HAI" was heard (or `listenNow` was called); HAI is now listening for the question. */
+  /** "Hello Jimmy" was heard (or `listenNow` was called); Jimmy is now listening for the question. */
   onWake: () => void;
   onInterim: (text: string) => void;
   onQuestion: (text: string) => void;
   /** Nothing was said after waking up. */
   onTimeout: () => void;
-  /** Called when the person says "stop" (for example while HAI is reading a reply aloud). */
+  /** Called when the person says "stop" (for example while Jimmy is reading a reply aloud). */
   onStop?: () => void;
 }) {
   const [error, setError] = useState("");
@@ -37,7 +37,7 @@ export function useWakeWord(opts: {
     if (!opts.active) return;
     const Ctor = getRecognitionCtor();
     if (!Ctor) {
-      setError("This browser can't listen for “Hello HAI”. Try Chrome or Edge.");
+      setError("This browser can't listen for “Hello Jimmy”. Try Chrome or Edge.");
       return;
     }
     let stopped = false;
@@ -139,7 +139,7 @@ export function useWakeWord(opts: {
       r.onerror = (event) => {
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
           stopped = true;
-          setError("Allow the microphone so HAI can hear “Hello HAI”.");
+          setError("Allow the microphone so Jimmy can hear “Hello Jimmy”.");
         }
       };
       r.onend = () => {
@@ -172,7 +172,7 @@ export function useWakeWord(opts: {
 
   /** Starts listening for a question right away (no wake word). False when not running. */
   const listenNow = useCallback(() => listenNowRef.current?.() ?? false, []);
-  /** Stops listening for the current question and goes back to waiting for "Hello HAI". */
+  /** Stops listening for the current question and goes back to waiting for "Hello Jimmy". */
   const cancel = useCallback(() => cancelRef.current?.(), []);
   /** Stops listening now and sends whatever was already heard. */
   const finish = useCallback(() => finishRef.current?.(), []);

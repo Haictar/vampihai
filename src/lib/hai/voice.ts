@@ -1,11 +1,11 @@
-// Pure rules for the "Hello HAI" wake word and HAI's female voice. Browser-free so they can be tested.
+// Pure rules for the "Hello Jimmy" wake word and Jimmy's female voice. Browser-free so they can be tested.
 
-// Speech recognisers write "HAI" many ways: hai, hi, high, hay, hey, AI, H.A.I.
+// Recognise the assistant name and common phonetic spellings without waking on ordinary greetings.
 const WAKE_PHRASE =
-  /\b(?:hello|hallo|hullo|helo)\s*[,.!]?\s*(?:hai|hi|hii|high|hay|hey|hye|hie|hy|ai|a\.?\s?i\.?|h\.?\s?a\.?\s?i\.?)(?=$|[\s,.!?])[\s,.!?]*/i;
+  /\b(?:hello|hallo|hullo|helo)\s*[,.!]?\s*(?:jimmy|jimmie)(?=$|[\s,.!?])[\s,.!?]*/i;
 
 /**
- * Looks for "Hello HAI" in what the microphone heard. Returns null when it is not there,
+ * Looks for "Hello Jimmy" in what the microphone heard. Returns null when it is not there,
  * otherwise whatever was said after it (empty when the person only said the wake word).
  */
 export function findWakeWord(heard: string): { rest: string } | null {
@@ -20,7 +20,7 @@ export interface HeardPhrase {
 }
 
 /**
- * After "Hello HAI", HAI keeps the same microphone session open and reads the question straight
+ * After "Hello Jimmy", Jimmy keeps the same microphone session open and reads the question straight
  * from it, so nothing has to restart. `from` is the first phrase that belongs to the question;
  * when `skipWake` is set that phrase still starts with the wake word, which is dropped.
  * The question is `done` once the newest phrase is final and something was actually said.
@@ -33,7 +33,8 @@ export function readQuestionAfterWake(
   const parts: string[] = [];
   let lastFinal = false;
   for (let i = Math.max(0, from); i < phrases.length; i++) {
-    const phrase = phrases[i]!;
+    const phrase = phrases[i];
+    if (!phrase) continue;
     let words = phrase.transcript;
     if (i === from && skipWake) words = findWakeWord(words)?.rest ?? "";
     words = words.trim();

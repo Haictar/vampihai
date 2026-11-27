@@ -1,4 +1,4 @@
-// Pure rules for what a chat message asks HAI to do. Shared by typed and spoken input.
+// Pure rules for what a chat message asks Jimmy to do. Shared by typed and spoken input.
 
 const IMAGE_VERBS = "generate|create|make|draw|paint|design|render|produce|sketch|imagine|illustrate";
 const IMAGE_NOUNS =
@@ -6,7 +6,7 @@ const IMAGE_NOUNS =
 
 // "generate an image of…", "can you draw me a picture of…", "make a logo for…"
 const IMAGE_REQUEST = new RegExp(
-  `^(?:hey hai[,!]?\\s+)?(?:please\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?(?:${IMAGE_VERBS})\\s+(?:me\\s+|us\\s+)?(?:an?\\s+|the\\s+|some\\s+|one\\s+|\\d+\\s+)?(?:[\\w-]+\\s+){0,3}?(?:${IMAGE_NOUNS})\\b`,
+  `^(?:hey jimmy[,!]?\\s+)?(?:please\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?(?:${IMAGE_VERBS})\\s+(?:me\\s+|us\\s+)?(?:an?\\s+|the\\s+|some\\s+|one\\s+|\\d+\\s+)?(?:[\\w-]+\\s+){0,3}?(?:${IMAGE_NOUNS})\\b`,
   "i",
 );
 // "draw a cat", "paint a sunset" — these verbs mean a picture on their own.
@@ -17,7 +17,7 @@ const IMAGE_COMMAND = /^\/(?:image|img|imagine)\s+\S/i;
 const CODE_WORDS =
   /\b(?:html|css|react|component|function|code|upload|uploader|api|python|javascript|typescript|script|tag|element|button|endpoint|database|class|sql|program|app)\b/i;
 
-/** True when the message asks HAI to produce a picture rather than a text answer. */
+/** True when the message asks Jimmy to produce a picture rather than a text answer. */
 export function isImageRequest(text: string): boolean {
   const t = text.trim();
   if (IMAGE_COMMAND.test(t)) return true;
@@ -40,7 +40,7 @@ export type VoiceCommand =
 
 /** "stop", "stop listening", "that's all", "goodbye": ends the spoken conversation. */
 export const STOP_PHRASE =
-  /^(?:stop(?: listening| talking| it)?|be quiet|quiet|shut up|cancel|never ?mind|that'?s all|that is all|good ?bye|bye(?: bye)?)(?:\s+(?:hai|hi|high|ai))?$/;
+  /^(?:stop(?: listening| talking| it)?|be quiet|quiet|shut up|cancel|never ?mind|that'?s all|that is all|good ?bye|bye(?: bye)?)(?:\s+(?:jimmy|jimmie))?$/;
 
 const VOICE_COMMANDS: { command: VoiceCommand; pattern: RegExp }[] = [
   { command: "new_chat", pattern: /^(?:start\s+)?(?:a\s+)?(?:new (?:chat|conversation)|clear (?:the )?chat|start over)$/ },
@@ -55,7 +55,7 @@ const VOICE_COMMANDS: { command: VoiceCommand; pattern: RegExp }[] = [
 export function matchVoiceCommand(spoken: string): VoiceCommand | null {
   const t = spoken
     .toLowerCase()
-    .replace(/^(?:hey\s+)?hai[,!]?\s+/, "")
+    .replace(/^(?:hey\s+)?(?:jimmy|jimmie)[,!]?\s+/, "")
     .replace(/^please\s+/, "")
     .replace(/[.!?,]+$/g, "")
     .replace(/\s+(?:for me|please|now|right now)$/, "")
@@ -107,7 +107,7 @@ const KNOWN_SITES: Record<string, string> = {
 function cleanSpoken(spoken: string): string {
   return spoken
     .toLowerCase()
-    .replace(/^(?:hey\s+)?hai[,!]?\s+/, "")
+    .replace(/^(?:hey\s+)?(?:jimmy|jimmie)[,!]?\s+/, "")
     .replace(/^(?:please\s+)?(?:(?:can|could|would|will) you\s+)?(?:please\s+)?/, "")
     .replace(/[.!?,]+$/g, "")
     .replace(/\s+(?:for me|please|now|right now)$/, "")

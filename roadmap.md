@@ -7,7 +7,7 @@
 - [x] Automatic model discovery per key (official model-list APIs, Refresh Models, retired-model handling)
 - [x] Remove the API key limit
 - [x] Full-screen chat
-- [ ] Rename the app to HAI everywhere
+- [x] Rename the app and assistant to Jimmy, including the wake phrase
 - [ ] Remove "Test with microphone" button and microphone status text
 - [ ] Speak option in chat: spoken commands are sent and performed
 - [ ] Attachments in chat (images, zip, code/text files) for the AI to read/edit

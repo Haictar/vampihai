@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { findWakeWord, pickFemaleVoice, readQuestionAfterWake } from "./voice";
 
 describe("findWakeWord", () => {
-  it("hears 'Hello HAI' however the browser spells HAI", () => {
-    for (const heard of ["Hello HAI", "hello hi", "Hello, high", "hello hey", "hello AI", "Hello H.A.I."]) {
+  it("hears 'Hello Jimmy' however the browser spells Jimmy", () => {
+    for (const heard of ["Hello Jimmy", "hello jimmy", "Hello, Jimmy!", "hello Jimmie"]) {
       expect(findWakeWord(heard)).toEqual({ rest: "" });
     }
   });
 
   it("returns the question said right after the wake word", () => {
-    expect(findWakeWord("hello hai what time is it in Tokyo")).toEqual({
+    expect(findWakeWord("hello jimmy what time is it in Tokyo")).toEqual({
       rest: "what time is it in Tokyo",
     });
   });
@@ -18,6 +18,8 @@ describe("findWakeWord", () => {
     expect(findWakeWord("what is the weather")).toBeNull();
     expect(findWakeWord("hello there")).toBeNull();
     expect(findWakeWord("hello highway")).toBeNull();
+    expect(findWakeWord("hello hai")).toBeNull();
+    expect(findWakeWord("hello jimmykins")).toBeNull();
   });
 });
 
@@ -46,7 +48,7 @@ describe("pickFemaleVoice", () => {
 
 describe("readQuestionAfterWake", () => {
   it("keeps listening when only the wake word was said", () => {
-    expect(readQuestionAfterWake([{ transcript: "hello hai", isFinal: true }], 0, true)).toEqual({
+    expect(readQuestionAfterWake([{ transcript: "hello jimmy", isFinal: true }], 0, true)).toEqual({
       text: "",
       done: false,
     });
@@ -54,13 +56,13 @@ describe("readQuestionAfterWake", () => {
 
   it("sends the words said in the same breath as the wake word", () => {
     expect(
-      readQuestionAfterWake([{ transcript: "hello hai open youtube", isFinal: true }], 0, true),
+      readQuestionAfterWake([{ transcript: "hello jimmy open youtube", isFinal: true }], 0, true),
     ).toEqual({ text: "open youtube", done: true });
   });
 
   it("waits while the person is still speaking", () => {
     expect(
-      readQuestionAfterWake([{ transcript: "hello hai what is the", isFinal: false }], 0, true),
+      readQuestionAfterWake([{ transcript: "hello jimmy what is the", isFinal: false }], 0, true),
     ).toEqual({ text: "what is the", done: false });
   });
 
@@ -69,7 +71,7 @@ describe("readQuestionAfterWake", () => {
       readQuestionAfterWake(
         [
           { transcript: "something earlier", isFinal: true },
-          { transcript: "hello hai", isFinal: true },
+          { transcript: "hello jimmy", isFinal: true },
           { transcript: "what time is it", isFinal: true },
         ],
         1,
